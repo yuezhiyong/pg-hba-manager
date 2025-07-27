@@ -1,0 +1,152 @@
+plugins {
+    id 'org.springframework.boot' version '2.7.14'
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+    id 'java'
+}
+
+// Java 8配置
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+}
+
+
+// 编码配置
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+// 同时设置source和target兼容性
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // MyBatis
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.3.1'
+
+    // PostgreSQL
+    runtimeOnly 'org.postgresql:postgresql:42.6.0'
+
+    // HikariCP
+    implementation 'com.zaxxer:HikariCP:4.0.3'
+
+    // ANTLR4
+    implementation 'org.antlr:antlr4-runtime:4.9.2'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.28'
+    annotationProcessor 'org.projectlombok:lombok:1.18.28'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+// ANTLR4插件配置
+configurations {
+    antlr
+}
+
+dependencies {
+    antlr 'org.antlr:antlr4:4.9.2'
+}
+
+
+// ANTLR4生成任务 - 修复路径
+tasks.register("generateGrammarSource", JavaExec) {
+    group = 'build'
+    description = 'Generates Java sources from ANTLR grammar files'
+    inputs.dir file('src/main/antlr4')
+    main = 'org.antlr.v4.Tool'
+    classpath = configurations.antlr
+    args = [
+            '-o', 'src/main/java/antlr4',
+            '-visitor',
+            '-listener',
+            '-package', 'antlr4',
+            'src/main/antlr4/Hba.g4'
+    ]
+    jvmArgs = ['-Dfile.encoding=UTF-8']
+    doFirst {
+        def outputDir = file('src/main/java/antlr4')
+        outputDir.mkdirs()
+        println "Generating ANTLR files to: ${outputDir.absolutePath}"
+    }
+
+    doLast {
+        println "ANTLR generation completed"
+        def generatedDir = file('build/classes/java/main/antlr4')
+        if (generatedDir.exists()) {
+            generatedDir.eachFile { file ->
+                println "Generated: ${file.name}"
+            }
+        }
+    }
+}
+
+// 确保编译前生成ANTLR文件
+compileJava {
+    dependsOn generateGrammarSource
+    options.encoding = 'UTF-8'
+
+    doFirst {
+        println "Compiling Java sources..."
+        println "Java version: ${JavaVersion.current()}"
+
+        // 显示源文件路径
+        sourceSets.main.java.srcDirs.each { dir ->
+            println "Source directory: ${dir}"
+        }
+    }
+}
+
+// 配置源集
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+    }
+}
+
+
+// 完全删除static目录的任务
+tasks.register('cleanStaticDir', Delete) {
+    group = 'build'
+    description = 'Completely remove static directory'
+    def staticDir = file('src/main/resources/static')
+    println "Static directory: ${staticDir.absolutePath}"
+    if (staticDir.exists()) {
+        staticDir.deleteDir()
+        println "Removed static directory: ${staticDir.absolutePath}"
+    }
+}
+
+
+clean {
+    dependsOn cleanStaticDir
+}
+
+// 确保 backend 的 processResources 任务依赖于前端构建
+tasks.named('processResources') {
+    dependsOn ':ui:buildFrontend'
+}
+
+
+tasks.named("build") {
+    dependsOn ':ui:buildFrontend'
+    mustRunAfter ':ui:buildFrontend'
+}
+
+
+

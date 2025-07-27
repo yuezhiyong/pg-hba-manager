@@ -1,0 +1,72 @@
+plugins {
+    id 'base'
+}
+
+tasks.register("installDependencies", Exec) {
+    group = 'Node'
+    description = 'Install npm dependencies'
+    println "running install ui dependencies..."
+    workingDir '.'
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'npm', 'install'
+    } else {
+        commandLine 'npm', 'install'
+    }
+}
+
+tasks.register("buildFrontend", Exec) {
+    group = 'Node'
+    description = 'Build Vue application'
+    dependsOn installDependencies
+
+    println "running build frontend..."
+    workingDir '.'
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        println "Building frontend on Windows..."
+        commandLine 'cmd', '/c', 'npm', 'run', 'build'
+    } else {
+        commandLine 'npm', 'run', 'build'
+    }
+}
+
+tasks.register("startDevServer", Exec) {
+    group = 'Node'
+    description = 'Start Vue development server on port 13000'
+    dependsOn installDependencies
+    workingDir '.'
+
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine 'cmd', '/c', 'npm', 'run', 'dev'
+    } else {
+        commandLine 'npm', 'run', 'dev'
+    }
+
+    doLast {
+        // 等待服务器启动后打开浏览器
+        Thread.sleep(3000) // 等待3秒让服务器启动
+        def os = System.getProperty("os.name").toLowerCase()
+        if (os.contains("windows")) {
+            "cmd /c start http://localhost:13000".execute()
+        } else if (os.contains("mac")) {
+            "open http://localhost:13000".execute()
+        } else {
+            "xdg-open http://localhost:13000".execute()
+        }
+    }
+}
+
+// 清理任务
+tasks.register("cleanFrontend", Delete) {
+    group = 'build'
+    description = 'Clean frontend build artifacts'
+    delete 'dist', 'node_modules'
+}
+
+// 重写默认任务
+tasks.named("build") {
+    dependsOn buildFrontend
+}
+
+tasks.clean {
+    dependsOn cleanFrontend
+}

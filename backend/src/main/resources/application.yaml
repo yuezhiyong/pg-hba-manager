@@ -1,0 +1,56 @@
+server:
+  port: 12000  # 后端端口
+
+spring:
+  datasource:
+    jdbc-url: jdbc:postgresql://localhost:15432/hba
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      pool-name: HikariPool-PgHba
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 30000
+      max-lifetime: 600000
+      auto-commit: true
+      connection-test-query: SELECT 1
+
+  # 自动执行SQL脚本
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+  application:
+    name: pg-hba-manager
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: pg.hba.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+
+logging:
+  level:
+    pg.hba: DEBUG
+    org.mybatis: DEBUG
+    com.zaxxer.hikari: DEBUG
+    org.springframework.web: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log
+
+pg:
+  hba:
+    backup:
+      enabled: true
+    config:
+      path: /etc/postgresql/pg_hba.conf
+    env:
+      pg-data: /var/lib/postgresql/data

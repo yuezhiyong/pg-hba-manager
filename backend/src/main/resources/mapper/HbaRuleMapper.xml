@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pg.hba.mapper.HbaRuleMapper">
+
+    <resultMap id="HbaRuleResultMap" type="pg.hba.entity.HbaRule">
+        <id property="id" column="id"/>
+        <result property="connectionType" column="connection_type"/>
+        <result property="databaseName" column="database_name"/>
+        <result property="userName" column="user_name"/>
+        <result property="address" column="address"/>
+        <result property="authMethod" column="auth_method"/>
+        <result property="comment" column="comment"/>
+        <result property="active" column="active"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+
+</mapper>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pg.hba.mapper.AuditLogMapper">
+
+    <resultMap id="AuditLogResultMap" type="pg.hba.entity.AuditLog">
+        <id property="id" column="id"/>
+        <result property="ruleId" column="rule_id"/>
+        <result property="action" column="action"/>
+        <result property="userName" column="user_name"/>
+        <result property="ipAddress" column="ip_address"/>
+        <result property="userAgent" column="user_agent"/>
+        <result property="oldValue" column="old_value"/>
+        <result property="newValue" column="new_value"/>
+        <result property="remarks" column="remarks"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="pg.hba.entity.AuditLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_logs (rule_id, action, user_name, ip_address, user_agent, old_value, new_value, remarks,
+        created_at)
+        VALUES (#{ruleId}, #{action}, #{userName}, #{ipAddress}, #{userAgent}, #{oldValue}, #{newValue}, #{remarks},
+        #{createdAt})
+    </insert>
+
+    <select id="findLatest" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT #{limit}
+    </select>
+
+    <select id="findByRuleId" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs WHERE rule_id = #{ruleId} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByAction" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs WHERE action = #{action} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByUserName" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs WHERE user_name = #{userName} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByDateRange" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs WHERE created_at BETWEEN #{startTime} AND #{endTime} ORDER BY created_at DESC
+    </select>
+
+    <select id="search" resultMap="AuditLogResultMap">
+        SELECT * FROM audit_logs
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%') OR remarks LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="action != null and action != ''">
+                AND action = #{action}
+            </if>
+            <if test="startTime != null">
+                AND created_at >= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearch" resultType="int">
+        SELECT COUNT(*) FROM audit_logs
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%') OR remarks LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="action != null and action != ''">
+                AND action = #{action}
+            </if>
+            <if test="startTime != null">
+                AND created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+    </select>
+
+    <delete id="deleteBefore">
+        DELETE FROM audit_logs WHERE created_at &gt; #{beforeTime}
+    </delete>
+
+</mapper>

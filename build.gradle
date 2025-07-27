@@ -1,0 +1,82 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.7.14' apply false
+    id 'io.spring.dependency-management' version '1.0.15.RELEASE' apply false
+}
+
+allprojects {
+    group = 'com.example'
+    version = '1.0.0'
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(8)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+
+// 根项目任务
+tasks.register("buildAll") {
+    group = 'build'
+    description = 'Build both backend and frontend modules'
+    dependsOn ':ui:build'
+    dependsOn ':backend:build'
+}
+
+
+// 启动所有服务并打开浏览器
+tasks.register("serveAll") {
+    group = 'application'
+    description = 'Start both backend and frontend servers and open browser'
+
+    doLast {
+        println "Starting all services..."
+        // 使用Gradle的并行执行方式
+        def os = System.getProperty("os.name").toLowerCase()
+        // 启动后端服务（在新窗口中）
+        if (os.contains("windows")) {
+            "cmd /c start \"Backend\" gradlew :backend:bootRun".execute()
+        } else if (os.contains("mac")) {
+            "osascript -e 'tell app \"Terminal\" to do script \"cd $projectDir && ./gradlew :backend:bootRun\"'".execute()
+        } else {
+            "gnome-terminal --title='Backend' -- ./gradlew :backend:bootRun".execute()
+        }
+        println "Backend service starting on port 12000..."
+        // 等待服务启动后打开浏览器
+        Thread.start {
+            Thread.sleep(15000) // 等待15秒让服务完全启动
+            openBrowser('http://localhost:12000')
+        }
+        println "Services started in separate terminals."
+        println "Backend: http://localhost:12000"
+        println "Browser will open automatically in 15 seconds..."
+    }
+}
+
+
+// 通用打开浏览器方法
+def openBrowser(String url) {
+    def os = System.getProperty("os.name").toLowerCase()
+    try {
+        if (os.contains("windows")) {
+            "cmd /c start $url".execute()
+        } else if (os.contains("mac")) {
+            "open $url".execute()
+        } else {
+            "xdg-open $url".execute()
+        }
+        println "Opened browser to: $url"
+    } catch (Exception e) {
+        println "Could not open browser automatically. Please visit: $url"
+        println "Error: ${e.message}"
+    }
+}

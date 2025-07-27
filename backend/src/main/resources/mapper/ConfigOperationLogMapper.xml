@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pg.hba.mapper.ConfigOperationLogMapper">
+
+    <resultMap id="ConfigOperationLogResultMap" type="pg.hba.entity.ConfigOperationLog">
+        <id property="id" column="id"/>
+        <result property="operationType" column="operation_type"/>
+        <result property="userName" column="user_name"/>
+        <result property="ipAddress" column="ip_address"/>
+        <result property="userAgent" column="user_agent"/>
+        <result property="status" column="status"/>
+        <result property="message" column="message"/>
+        <result property="details" column="details"/>
+        <result property="durationMs" column="duration_ms"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="pg.hba.entity.ConfigOperationLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO config_operation_logs (operation_type, user_name, ip_address, user_agent, status, message, details, duration_ms, created_at)
+        VALUES (#{operationType}, #{userName}, #{ipAddress}, #{userAgent}, #{status}, #{message}, #{details}, #{durationMs}, #{createdAt})
+    </insert>
+
+    <select id="findLatest" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs ORDER BY created_at DESC LIMIT #{limit}
+    </select>
+
+    <select id="findByOperationType" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs WHERE operation_type = #{operationType} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByUserName" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs WHERE user_name = #{userName} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByStatus" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs WHERE status = #{status} ORDER BY created_at DESC
+    </select>
+
+    <select id="findByDateRange" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs WHERE created_at BETWEEN #{startTime} AND #{endTime} ORDER BY created_at DESC
+    </select>
+
+    <select id="search" resultMap="ConfigOperationLogResultMap">
+        SELECT * FROM config_operation_logs
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%') OR message LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="operationType != null and operationType != ''">
+                AND operation_type = #{operationType}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="startTime != null">
+                AND created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearch" resultType="int">
+        SELECT COUNT(*) FROM config_operation_logs
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (user_name LIKE CONCAT('%', #{keyword}, '%') OR message LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="operationType != null and operationType != ''">
+                AND operation_type = #{operationType}
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="startTime != null">
+                AND created_at &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND created_at &lt;= #{endTime}
+            </if>
+        </where>
+    </select>
+
+    <select id="getOperationTypeStatistics" resultType="pg.hba.entity.OperationTypeCount">
+        SELECT operation_type, COUNT(*) as count FROM config_operation_logs GROUP BY operation_type
+    </select>
+
+    <select id="getStatusStatistics" resultType="pg.hba.entity.StatusCount">
+        SELECT status, COUNT(*) as count FROM config_operation_logs GROUP BY status
+    </select>
+
+</mapper>
