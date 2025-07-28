@@ -79,7 +79,8 @@ public class HbaRuleController {
             hbaRuleService.activateRule(id, servletRequest);
             return ResponseEntity.ok(new ApiResponse(true, "Rule deactivated successfully", null));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(false, "Failed to deactivate rule: " + e.getMessage(), null));
+            log.error("激活规则失败:", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(false, "Failed to active rule: " + e.getMessage(), null));
         }
     }
 

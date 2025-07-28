@@ -34,12 +34,9 @@ public interface HbaRuleMapper {
     @Select("SELECT * FROM hba_rules WHERE user_name = #{userName} AND active = true")
     List<HbaRule> findByUserName(String userName);
 
-    @Insert("INSERT INTO hba_rules (connection_type, database_name, user_name, address, auth_method, comment, active, created_at, updated_at) " + "VALUES (#{connectionType}, #{databaseName}, #{userName}, #{address}, #{authMethod}, #{comment}, #{active}, #{createdAt}, #{updatedAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
-    int insert(HbaRule rule);
+    int insertRule(HbaRule rule);
 
 
-    @Update("UPDATE hba_rules SET connection_type = #{connectionType}, database_name = #{databaseName}, " + "user_name = #{userName}, address = #{address}, auth_method = #{authMethod}, " + "comment = #{comment}, active = #{active}, updated_at = #{updatedAt} " + "WHERE id = #{id}")
     int update(HbaRule rule);
 
     @Delete("DELETE FROM hba_rules WHERE id = #{id}")

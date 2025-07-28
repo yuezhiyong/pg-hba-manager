@@ -18,4 +18,32 @@
     </resultMap>
 
 
+    <insert id="insertRule" parameterType="pg.hba.entity.HbaRule" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO hba_rules (connection_type, database_name, user_name, address, auth_method, comment, active, created_at, updated_at)
+        VALUES (#{connectionType}, #{databaseName}, #{userName},
+        <choose>
+            <when test='connectionType == "local"'>NULL</when>
+            <otherwise>#{address}</otherwise>
+        </choose>,
+        #{authMethod}, #{comment}, #{active}, #{createdAt}, #{updatedAt})
+    </insert>
+
+    <!-- 更新update语句 -->
+    <update id="update" parameterType="pg.hba.entity.HbaRule">
+        UPDATE hba_rules
+        SET connection_type = #{connectionType},
+        database_name = #{databaseName},
+        user_name = #{userName},
+        address = <choose>
+        <when test='connectionType == "local"'>NULL</when>
+        <otherwise>#{address}</otherwise>
+    </choose>,
+        auth_method = #{authMethod},
+        comment = #{comment},
+        active = #{active},
+        updated_at = #{updatedAt}
+        WHERE id = #{id}
+    </update>
+
+
 </mapper>

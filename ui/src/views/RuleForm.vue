@@ -15,7 +15,7 @@
         label-width="120px"
         label-position="left"
       >
-        <!-- 直接输入规则文本 -->
+        <!-- 规则文本输入 -->
         <el-form-item label="规则文本" prop="ruleLine">
           <el-input
             v-model="ruleForm.ruleLine"
@@ -135,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import hbaRuleService from '@/services/hbaRuleService'
@@ -160,7 +160,7 @@ const ruleForm = reactive({
 })
 
 // 表单验证规则
-const rules = {
+const rules = computed(() => ({
   ruleLine: [
     { required: false, message: '请输入规则文本', trigger: 'blur' }
   ],
@@ -174,19 +174,24 @@ const rules = {
     { required: true, message: '请输入用户名', trigger: 'blur' }
   ],
   address: [
-    { required: (rule, value, callback) => {
-        if (ruleForm.connectionType !== 'local' && (!value || value.trim() === '')) {
-          callback(new Error('请输入地址'))
-        } else {
-          callback()
-        }
-      }, trigger: 'blur'
+    {
+      required: ruleForm.connectionType !== 'local',
+      message: '请输入地址',
+      trigger: 'blur'
     }
   ],
   authMethod: [
     { required: true, message: '请选择认证方法', trigger: 'change' }
   ]
-}
+}))
+
+// 监听连接类型变化，动态调整地址字段
+watch(() => ruleForm.connectionType, (newType) => {
+  if (newType === 'local') {
+    // 对于local类型，清空地址字段
+    ruleForm.address = ''
+  }
+})
 
 // 状态
 const submitLoading = ref(false)
@@ -261,7 +266,7 @@ const submitForm = async () => {
           connectionType: ruleForm.connectionType,
           databaseName: ruleForm.databaseName,
           userName: ruleForm.userName,
-          address: ruleForm.address,
+          address: ruleForm.connectionType === 'local' ? null : ruleForm.address,
           authMethod: ruleForm.authMethod,
           comment: ruleForm.comment,
           active: ruleForm.active
@@ -274,7 +279,8 @@ const submitForm = async () => {
         let ruleLine = ruleForm.ruleLine.trim()
         if (!ruleLine) {
           // 如果没有直接输入规则行，则构造规则行
-          ruleLine = `${ruleForm.connectionType} ${ruleForm.databaseName} ${ruleForm.userName} ${ruleForm.address || 'all'} ${ruleForm.authMethod}`
+          const address = ruleForm.connectionType === 'local' ? 'all' : (ruleForm.address || 'all')
+          ruleLine = `${ruleForm.connectionType} ${ruleForm.databaseName} ${ruleForm.userName} ${address} ${ruleForm.authMethod}`
           if (ruleForm.comment) {
             ruleLine += ` # ${ruleForm.comment}`
           }

@@ -43,16 +43,18 @@ public class RuleValidationService {
         }
 
         // 对于非local连接类型，必须有地址
-        if (!"local".equals(rule.getConnectionType()) &&
-                (rule.getAddress() == null || rule.getAddress().isEmpty())) {
-            result.addError("Address is required for non-local connection types");
-        }
-
-        // 验证IP地址格式
-        if (rule.getAddress() != null && !rule.getAddress().isEmpty() &&
-                !"all".equals(rule.getAddress())) {
-            if (!isValidIpAddress(rule.getAddress())) {
+        if (!"local".equals(rule.getConnectionType())) {
+            if (rule.getAddress() == null || rule.getAddress().isEmpty()) {
+                result.addError("Address is required for non-local connection types");
+            } else if (!isValidIpAddress(rule.getAddress())) {
                 result.addError("Invalid IP address or CIDR format: " + rule.getAddress());
+            }
+        } else {
+            // 对于local连接类型，地址可以为空或设置为null
+            // 这里我们允许local类型有地址，但通常应该为空
+            if (rule.getAddress() != null && !rule.getAddress().isEmpty() &&
+                    !"all".equals(rule.getAddress())) {
+                result.addError("Local connection type should not have specific address, use 'all' or leave empty");
             }
         }
 
@@ -72,7 +74,9 @@ public class RuleValidationService {
     private boolean isValidIpAddress(String address) {
         return "all".equals(address) ||
                 IP_ADDRESS_PATTERN.matcher(address).matches() ||
-                CIDR_PATTERN.matcher(address).matches();
+                CIDR_PATTERN.matcher(address).matches() ||
+                address == null ||
+                address.isEmpty();
     }
 
 

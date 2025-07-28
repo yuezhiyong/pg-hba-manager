@@ -60,7 +60,7 @@
           同步到pg_hba.conf
         </el-button>
 
-        <el-button type="success" @click="reloadPostgreSQL" :loading="reloading">
+        <el-button type="success" @click="reloadPostGreSQL" :loading="reloading">
           <el-icon><RefreshRight /></el-icon>
           重载PostgreSQL配置
         </el-button>
@@ -147,19 +147,22 @@
       </template>
 
       <div class="editor-container">
-        <el-input
+        <!-- 使用新的代码编辑器组件，支持主题切换 -->
+        <CodeEditor
+          ref="codeEditorRef"
           v-model="configContent"
-          type="textarea"
-          :rows="20"
           :readonly="isPreviewMode"
+          :theme="editorTheme"
           placeholder="请输入配置内容..."
-          class="config-editor"
-          :class="{ 'preview-mode': isPreviewMode }"
-        ></el-input>
+          class="config-code-editor"
+          @theme-change="handleThemeChange"
+        />
 
         <div class="editor-info" v-if="configFileInfo">
           <el-tag type="info">文件路径: {{ configFileInfo.path }}</el-tag>
           <el-tag type="info" style="margin-left: 10px;">文件大小: {{ formatFileSize(configFileInfo.size || 0) }}</el-tag>
+          <el-tag type="info" style="margin-left: 10px;">总行数: {{ lineCount }} 行</el-tag>
+          <el-tag type="info" style="margin-left: 10px;">主题: {{ currentThemeName }}</el-tag>
         </div>
       </div>
 
@@ -181,7 +184,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Refresh,
@@ -193,6 +196,7 @@ import {
   ScaleToOriginal
 } from '@element-plus/icons-vue'
 import hbaRuleService from '@/services/hbaRuleService'
+import CodeEditor from '@/components/CodeEditor.vue' // 导入新的代码编辑器组件
 
 const configStatus = ref({
   path: '',
@@ -221,6 +225,26 @@ const configContent = ref('')
 const configFileInfo = ref(null)
 const isPreviewMode = ref(false)
 const editorFullscreen = ref(false)
+const codeEditorRef = ref(null)
+const editorTheme = ref('code-editor') // 默认使用代码编辑器主题
+
+// 主题映射
+const themeNames = {
+  'light': '浅色主题',
+  'dark': '深色主题',
+  'code-editor': '代码编辑器主题',
+  'text-editor': '文本编辑器主题'
+}
+
+const currentThemeName = computed(() => {
+  return themeNames[editorTheme.value] || '未知主题'
+})
+
+// 添加行数计算
+const lineCount = computed(() => {
+  if (!configContent.value) return 0
+  return configContent.value.split('\n').length
+})
 
 const loadConfigStatus = async () => {
   try {
@@ -266,10 +290,10 @@ const syncConfig = async () => {
   }
 }
 
-const reloadPostgreSQL = async () => {
+const reloadPostGreSQL = async () => {
   try {
     reloading.value = true
-    const response = await hbaRuleService.reloadPostgreSQL()
+    const response = await hbaRuleService.reloadPostGreSQL()
     reloadResult.value = response.data.data
     if (response.data.success) {
       ElMessage.success(response.data.message)
@@ -320,6 +344,7 @@ const openConfigEditor = async () => {
       size: response.data.data.content.length
     }
     isPreviewMode.value = false
+    editorTheme.value = 'code-editor' // 编辑模式默认使用代码编辑器主题
     configEditorDialogVisible.value = true
   } catch (error) {
     ElMessage.error('读取配置文件失败: ' + error.message)
@@ -335,6 +360,7 @@ const openConfigPreview = async () => {
       size: response.data.data.content.length
     }
     isPreviewMode.value = true
+    editorTheme.value = 'text-editor' // 预览模式默认使用文本编辑器主题
     configEditorDialogVisible.value = true
   } catch (error) {
     ElMessage.error('读取配置文件失败: ' + error.message)
@@ -390,6 +416,12 @@ const handleEditorDialogClose = () => {
   configFileInfo.value = null
   isPreviewMode.value = false
   editorFullscreen.value = false
+  editorTheme.value = 'code-editor'
+}
+
+// 处理主题切换
+const handleThemeChange = (theme) => {
+  editorTheme.value = theme
 }
 
 const addLog = (type, message) => {
@@ -473,15 +505,11 @@ pre {
   flex-direction: column;
 }
 
-.config-editor {
+.config-code-editor {
   flex: 1;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.config-editor.preview-mode {
-  background-color: #f5f7fa;
+  min-height: 400px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
 }
 
 .editor-info {

@@ -20,7 +20,7 @@ public class HbaRule {
 
     private String userName;
 
-    private String address;
+    private String address; // 对于local类型可以为null
 
     private String authMethod;
 

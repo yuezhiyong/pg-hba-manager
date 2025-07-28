@@ -93,7 +93,8 @@ public class HbaRuleService {
         }
         // 保存规则
         rule.setCreatedAt(LocalDateTime.now());
-        int res = hbaRuleMapper.insert(rule);
+        rule.setActive(false);
+        int res = hbaRuleMapper.insertRule(rule);
         if (res < 1) {
             throw new BusinessException("保存失败");
         }
