@@ -1,38 +1,6 @@
 <template>
   <div class="code-editor" :class="[themeClass, { 'read-only': readonly }]">
     <div class="editor-container">
-      <!-- 工具栏 -->
-      <div class="editor-toolbar" v-if="!readonly">
-        <div class="toolbar-left">
-          <el-select
-            v-model="currentTheme"
-            size="small"
-            @change="changeTheme"
-            placeholder="选择主题"
-          >
-            <el-option label="深色主题" value="code-editor"></el-option>
-            <el-option label="浅色主题" value="text-editor"></el-option>
-          </el-select>
-        </div>
-        <div class="toolbar-right">
-          <el-button
-            size="small"
-            @click="copyToClipboard"
-            title="复制到剪贴板"
-          >
-            <el-icon><CopyDocument /></el-icon>
-          </el-button>
-          <el-button
-            size="small"
-            @click="formatContent"
-            title="格式化内容"
-            v-if="!readonly"
-          >
-            <el-icon><MagicStick /></el-icon>
-          </el-button>
-        </div>
-      </div>
-
       <!-- 行号区域 -->
       <div class="line-numbers" ref="lineNumbersRef">
         <div
@@ -81,8 +49,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { CopyDocument, MagicStick } from '@element-plus/icons-vue'
 
 // 定义props
 const props = defineProps({
@@ -109,7 +75,7 @@ const props = defineProps({
 })
 
 // 定义emits
-const emit = defineEmits(['update:modelValue', 'theme-change'])
+const emit = defineEmits(['update:modelValue'])
 
 // 响应式数据
 const localValue = ref(props.modelValue || '')
@@ -117,7 +83,6 @@ const textareaRef = ref(null)
 const lineNumbersRef = ref(null)
 const currentLine = ref(1)
 const currentColumn = ref(1)
-const currentTheme = ref(props.theme)
 
 // 计算属性
 const lineCount = computed(() => {
@@ -130,7 +95,7 @@ const characterCount = computed(() => {
 })
 
 const themeClass = computed(() => {
-  return `theme-${currentTheme.value}`
+  return `theme-${props.theme}`
 })
 
 // 处理滚动同步
@@ -144,9 +109,6 @@ const handleScroll = () => {
 // 处理输入
 const handleInput = () => {
   emit('update:modelValue', localValue.value)
-  nextTick(() => {
-    updateCurrentLine()
-  })
 }
 
 // 处理键盘事件
@@ -163,15 +125,11 @@ const handleKeydown = (event) => {
     localValue.value = localValue.value.substring(0, start) + '\t' + localValue.value.substring(end)
 
     // 恢复光标位置
-    nextTick(() => {
-      textareaRef.value.selectionStart = textareaRef.value.selectionEnd = start + 1
-    })
-  }
-
-  // Ctrl+S 保存
-  if (event.ctrlKey && event.key === 's') {
-    event.preventDefault()
-    // 可以在这里触发保存事件
+    setTimeout(() => {
+      if (textareaRef.value) {
+        textareaRef.value.selectionStart = textareaRef.value.selectionEnd = start + 1
+      }
+    }, 0)
   }
 }
 
@@ -193,30 +151,23 @@ const updateCurrentLine = () => {
   currentColumn.value = columnNumber
 }
 
-// 主题切换
-const changeTheme = (theme) => {
-  currentTheme.value = theme
-  emit('theme-change', theme)
-}
-
 // 复制到剪贴板
 const copyToClipboard = () => {
   if (localValue.value) {
     navigator.clipboard.writeText(localValue.value).then(() => {
-      ElMessage.success('内容已复制到剪贴板')
+      // 成功回调可以通过事件传递给父组件
     }).catch(() => {
-      ElMessage.error('复制失败')
+      // 失败回调可以通过事件传递给父组件
     })
   }
 }
 
-// 格式化内容（简单示例）
+// 格式化内容
 const formatContent = () => {
   if (!localValue.value || props.readonly) return
 
   try {
     // 这里可以添加更复杂的格式化逻辑
-    // 例如：整理空白行、统一缩进等
     const formatted = localValue.value
       .split('\n')
       .map(line => line.trimEnd())
@@ -224,9 +175,8 @@ const formatContent = () => {
       .replace(/\n{3,}/g, '\n\n') // 最多保留两个空行
 
     localValue.value = formatted
-    ElMessage.success('内容已格式化')
   } catch (error) {
-    ElMessage.error('格式化失败: ' + error.message)
+    // 错误处理可以通过事件传递给父组件
   }
 }
 
@@ -237,25 +187,14 @@ watch(() => props.modelValue, (newValue) => {
   }
 })
 
-// 监听主题变化
-watch(() => props.theme, (newTheme) => {
-  currentTheme.value = newTheme
-})
-
 // 组件挂载后初始化
 onMounted(() => {
   if (textareaRef.value) {
     textareaRef.value.addEventListener('scroll', handleScroll)
+    // 初始化光标位置
+    updateCurrentLine()
   }
-  updateCurrentLine()
 })
-
-// 组件卸载前清理
-// onUnmounted(() => {
-//   if (textareaRef.value) {
-//     textareaRef.value.removeEventListener('scroll', handleScroll)
-//   }
-// })
 
 // 暴露方法给父组件
 defineExpose({
@@ -273,6 +212,7 @@ defineExpose({
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* 浅色主题 */
@@ -407,38 +347,6 @@ defineExpose({
 /* 只读模式 */
 .code-editor.read-only {
   opacity: 0.9;
-}
-
-/* 工具栏 */
-.editor-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e4e7ed;
-  background-color: #f5f7fa;
-}
-
-.code-editor.theme-dark .editor-toolbar {
-  background-color: #2d2d30;
-  border-bottom: 1px solid #3c3c3c;
-}
-
-.code-editor.theme-code-editor .editor-toolbar {
-  background-color: #252526;
-  border-bottom: 1px solid #3c3c3c;
-}
-
-.code-editor.theme-text-editor .editor-toolbar {
-  background-color: #f8f8f8;
-  border-bottom: 1px solid #e4e7ed;
-}
-
-.toolbar-left,
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* 编辑器容器 */

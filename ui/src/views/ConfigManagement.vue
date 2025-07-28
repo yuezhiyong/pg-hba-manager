@@ -12,7 +12,7 @@
         <template #header>
           <span>PostgreSQL状态</span>
         </template>
-
+        
         <el-descriptions :column="2" border>
           <el-descriptions-item label="连接状态">
             <el-tag :type="postgresStatus.connected ? 'success' : 'danger'">
@@ -21,7 +21,7 @@
           </el-descriptions-item>
           <el-descriptions-item label="版本信息">{{ postgresStatus.version }}</el-descriptions-item>
         </el-descriptions>
-
+        
         <div style="margin-top: 15px; text-align: center;">
           <el-button @click="checkPostGreSQLStatus" :loading="checkingStatus">
             <el-icon><Refresh /></el-icon>
@@ -35,7 +35,7 @@
         <template #header>
           <span>配置文件状态</span>
         </template>
-
+        
         <el-descriptions :column="2" border>
           <el-descriptions-item label="配置文件路径">{{ configStatus.path }}</el-descriptions-item>
           <el-descriptions-item label="文件存在">
@@ -59,23 +59,23 @@
           <el-icon><Refresh /></el-icon>
           同步到pg_hba.conf
         </el-button>
-
+        
         <el-button type="success" @click="reloadPostGreSQL" :loading="reloading">
           <el-icon><RefreshRight /></el-icon>
           重载PostgreSQL配置
         </el-button>
-
+        
         <el-button @click="checkPermission">
           <el-icon><Check /></el-icon>
           检查权限
         </el-button>
-
+        
         <!-- 新增的在线编辑和预览按钮 -->
         <el-button type="warning" @click="openConfigEditor">
           <el-icon><Edit /></el-icon>
           在线编辑
         </el-button>
-
+        
         <el-button @click="openConfigPreview">
           <el-icon><View /></el-icon>
           在线预览
@@ -87,7 +87,7 @@
         <template #header>
           <span>重载结果</span>
         </template>
-
+        
         <el-descriptions :column="1" border>
           <el-descriptions-item label="状态">
             <el-tag :type="reloadResult.success ? 'success' : 'danger'">
@@ -110,7 +110,7 @@
         <template #header>
           <span>操作日志</span>
         </template>
-
+        
         <el-timeline>
           <el-timeline-item
             v-for="(log, index) in logs"
@@ -125,8 +125,8 @@
     </el-card>
 
     <!-- 配置文件编辑对话框 -->
-    <el-dialog
-      v-model="configEditorDialogVisible"
+    <el-dialog 
+      v-model="configEditorDialogVisible" 
       :title="isPreviewMode ? '配置文件预览' : '编辑配置文件'"
       width="80%"
       :fullscreen="editorFullscreen"
@@ -136,18 +136,56 @@
         <div class="dialog-header">
           <span>{{ isPreviewMode ? '配置文件预览' : '编辑配置文件' }}</span>
           <div class="dialog-header-actions">
-            <el-button
-              :icon="editorFullscreen ? 'FullScreen' : 'ScaleToOriginal'"
+            <!-- 主题选择下拉框 -->
+            <el-select 
+              v-model="editorTheme" 
+              size="small" 
+              @change="handleThemeChange"
+              placeholder="主题"
+              style="width: 120px; margin-right: 8px;"
+            >
+              <el-option label="浅色" value="light"></el-option>
+              <el-option label="深色" value="dark"></el-option>
+              <el-option label="代码编辑器" value="code-editor"></el-option>
+              <el-option label="文本编辑器" value="text-editor"></el-option>
+            </el-select>
+            
+            <!-- 复制按钮 -->
+            <el-button 
+              size="small" 
+              @click="copyToClipboard"
+              circle
+              title="复制到剪贴板"
+            >
+              <el-icon><CopyDocument /></el-icon>
+            </el-button>
+            
+            <!-- 格式化按钮 -->
+            <el-button 
+              size="small" 
+              @click="formatContent"
+              circle
+              title="格式化内容"
+              v-if="!isPreviewMode"
+              style="margin-right: 8px;"
+            >
+              <el-icon><MagicStick /></el-icon>
+            </el-button>
+            
+            <!-- 全屏/缩小按钮 -->
+            <el-button 
+              :icon="editorFullscreen ? 'ScaleToOriginal' : 'FullScreen'" 
               @click="toggleEditorFullscreen"
               circle
               size="small"
+              :title="editorFullscreen ? '退出全屏' : '全屏'"
             ></el-button>
           </div>
         </div>
       </template>
-
+      
       <div class="editor-container">
-        <!-- 使用新的代码编辑器组件，支持主题切换 -->
+        <!-- 使用代码编辑器组件 -->
         <CodeEditor
           ref="codeEditorRef"
           v-model="configContent"
@@ -155,9 +193,8 @@
           :theme="editorTheme"
           placeholder="请输入配置内容..."
           class="config-code-editor"
-          @theme-change="handleThemeChange"
         />
-
+        
         <div class="editor-info" v-if="configFileInfo">
           <el-tag type="info">文件路径: {{ configFileInfo.path }}</el-tag>
           <el-tag type="info" style="margin-left: 10px;">文件大小: {{ formatFileSize(configFileInfo.size || 0) }}</el-tag>
@@ -165,13 +202,13 @@
           <el-tag type="info" style="margin-left: 10px;">主题: {{ currentThemeName }}</el-tag>
         </div>
       </div>
-
+      
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="configEditorDialogVisible = false">取消</el-button>
-          <el-button
-            v-if="!isPreviewMode"
-            type="primary"
+          <el-button 
+            v-if="!isPreviewMode" 
+            type="primary" 
             @click="saveConfigContent"
             :loading="savingConfig"
           >
@@ -186,17 +223,19 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Refresh,
-  RefreshRight,
-  Check,
-  Edit,
+import { 
+  Refresh, 
+  RefreshRight, 
+  Check, 
+  Edit, 
   View,
   FullScreen,
-  ScaleToOriginal
+  ScaleToOriginal,
+  CopyDocument,
+  MagicStick
 } from '@element-plus/icons-vue'
 import hbaRuleService from '@/services/hbaRuleService'
-import CodeEditor from '@/components/CodeEditor.vue' // 导入新的代码编辑器组件
+import CodeEditor from '@/components/CodeEditor.vue'
 
 const configStatus = ref({
   path: '',
@@ -230,8 +269,6 @@ const editorTheme = ref('code-editor') // 默认使用代码编辑器主题
 
 // 主题映射
 const themeNames = {
-  'light': '浅色主题',
-  'dark': '深色主题',
   'code-editor': '代码编辑器主题',
   'text-editor': '文本编辑器主题'
 }
@@ -386,7 +423,7 @@ const saveConfigContent = async () => {
 
     savingConfig.value = true
     const response = await hbaRuleService.updatePgHbaConfigContent(configContent.value)
-
+    
     if (response.data.success) {
       ElMessage.success('配置文件保存成功')
       configEditorDialogVisible.value = false
@@ -422,6 +459,26 @@ const handleEditorDialogClose = () => {
 // 处理主题切换
 const handleThemeChange = (theme) => {
   editorTheme.value = theme
+}
+
+// 复制到剪贴板
+const copyToClipboard = () => {
+  if (codeEditorRef.value && typeof codeEditorRef.value.copyToClipboard === 'function') {
+    codeEditorRef.value.copyToClipboard()
+  } else if (configContent.value) {
+    navigator.clipboard.writeText(configContent.value).then(() => {
+      ElMessage.success('内容已复制到剪贴板')
+    }).catch(() => {
+      ElMessage.error('复制失败')
+    })
+  }
+}
+
+// 格式化内容
+const formatContent = () => {
+  if (codeEditorRef.value && typeof codeEditorRef.value.formatContent === 'function') {
+    codeEditorRef.value.formatContent()
+  }
 }
 
 const addLog = (type, message) => {
@@ -487,7 +544,7 @@ pre {
   border-radius: 4px;
 }
 
-/* 编辑器对话框样式 */
+/* 对话框头部 */
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -496,9 +553,19 @@ pre {
 }
 
 .dialog-header-actions {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
+.dialog-header-actions .el-button {
+  margin-left: 8px;
+}
+
+.dialog-header-actions .el-select {
+  margin-right: 8px;
+}
+
+/* 编辑器容器 */
 .editor-container {
   height: 100%;
   display: flex;
